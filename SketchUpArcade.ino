@@ -60,7 +60,7 @@ char comboKeypress[5][3] = {
 };
 
 boolean fogFlag = false;
-unsigned int fogTime = 2;  
+unsigned int fogTime = 1;  
 unsigned long fogStartTime;
 unsigned long fogStopTime;
 
@@ -114,7 +114,7 @@ void setup() {
 
   setAllLEDs(colorVal(255, 0, 0));
   
- //theaterChaseRainbow(50);
+ theaterChaseRainbow(100);
  setAllLEDs(colorVal(255, 0, 0));
 
 }
@@ -150,6 +150,7 @@ void loop() {
         digitalWrite(fogRelayPin, HIGH);
         //Erics addition for the bomb button
         theaterChaseRainbow(4);
+        setAllLEDs(colorVal(255, 0, 0));
       }
       else
       {
@@ -186,7 +187,7 @@ void readStdButtons() {
       Keyboard.print(keypress[i]);
       Serial.println(keypress[i]);
 
-      setAllLEDs(colorVal(255, 255, 255));
+      setAllLEDs(colorVal(0, 0, 255));
       delay(100);
       setAllLEDs(colorVal(255, 0, 0));
       digitalWrite(17, LOW); //light up debug LED
