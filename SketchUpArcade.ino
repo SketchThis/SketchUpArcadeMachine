@@ -1,10 +1,12 @@
+#include <Keyboard.h>
+
 /********************************************************************************
   SketchUp & SparkFun Arcade Controls
   Line (L)
   Rectangle (R)
   Circle (C)
   Push / Pull (P)
-  Explosion (CTRL+N)
+  Explosion (CTRL+Shift+N)
   Move (M)
   Paint Bucket (B)
   Tape Measure (T)
@@ -32,13 +34,13 @@ byte fogRelayPin = 8;
 byte fogMachineMain = 9;
 
 byte volumeLEDPin = 5;
-byte frontLEDPin = 2;
-byte sideLEDPin = 3;
+byte frontLEDPin = 3;
+byte sideLEDPin = 2;
 byte startUpWAVPin = 6;
 byte bombWAVPin = 7;
 
-Adafruit_NeoPixel frontPixels =  Adafruit_NeoPixel(68, frontLEDPin, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel sidePixels =  Adafruit_NeoPixel(40, sideLEDPin, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel frontPixels =  Adafruit_NeoPixel(40, frontLEDPin, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel sidePixels =  Adafruit_NeoPixel(68, sideLEDPin, NEO_GRB + NEO_KHZ800);
 
 const byte brightnessLevel = 255;
 
@@ -50,7 +52,7 @@ char keypress[8] = {'l', 'r', 'c', 'p', 'm', 'b', 't', 'e'};
 //setup to handle up to three sequential keystrokes
 //create a 2d array for keymapping of combo buttons / commands
 char comboKeypress[5][3] = {
-  {KEY_LEFT_CTRL, 'n', 0},
+  {KEY_LEFT_CTRL, KEY_LEFT_SHIFT, 'n'},
   {KEY_LEFT_CTRL, 'r', 0},
   {KEY_LEFT_CTRL, 'e', 0},
   {KEY_LEFT_CTRL, '.', 0},
@@ -58,7 +60,7 @@ char comboKeypress[5][3] = {
 };
 
 boolean fogFlag = false;
-unsigned int fogTime = 15;  
+unsigned int fogTime = 2;  
 unsigned long fogStartTime;
 unsigned long fogStopTime;
 
@@ -105,9 +107,29 @@ void setup() {
   delay(100);
   digitalWrite(startUpWAVPin, HIGH);
 
-  setAllLEDs(colorVal(0, 0, 255));  //startup all LED strands to BLUE
+  setAllLEDs(colorVal(255, 0, 0));  //startup all LED strands to RED
   digitalWrite(volumeLEDPin, HIGH);
-  digitalWrite(fogMachineMain, HIGH);  //turn on fogMachine relay
+
+  setAllLEDs(colorVal(255, 0, 0));
+  
+ // theaterChaseRainbow(50);
+// setAllLEDs(colorVal(255, 0, 0));
+
+  
+  ///digitalWrite(fogMachineMain, HIGH);  //turn on fogMachine relay
+//  delay(90000);
+ // digitalWrite(fogRelayPin, HIGH);
+  //delay(1500);
+ // digitalWrite(fogRelayPin, LOW);
+ // delay(1500);
+ // digitalWrite(fogRelayPin, HIGH);
+//  delay(1500);
+//  digitalWrite(fogRelayPin, LOW);
+//  delay(1500);
+ // digitalWrite(fogRelayPin, HIGH);
+//  delay(1500);
+//  digitalWrite(fogRelayPin, LOW);
+ // delay(1500);
 }
 
 /********************************************************************************/
@@ -176,8 +198,8 @@ void readStdButtons() {
       Serial.println(keypress[i]);
 
       setAllLEDs(colorVal(255, 255, 255));
-      delay(50);
-      setAllLEDs(colorVal(0, 0, 255));
+      delay(100);
+      setAllLEDs(colorVal(255, 0, 0));
       digitalWrite(17, LOW); //light up debug LED
       //      delay(20);
 
@@ -210,6 +232,8 @@ void readComboButtons()
         digitalWrite(bombWAVPin, LOW);
         delay(10);
         digitalWrite(bombWAVPin, HIGH);
+        theaterChaseRainbow(2);
+        setAllLEDs(colorVal(255, 0, 0));
       }
       for (int key = 0; key < 3; key++) {
         Keyboard.press(comboKeypress[i][key]);
@@ -308,18 +332,26 @@ void theaterChase(Adafruit_NeoPixel strip, unsigned long c, int wait) {
 
 /********************************************************************************/
 //Theatre-style crawling lights with rainbow effect
-void theaterChaseRainbow(Adafruit_NeoPixel strip, byte wait) {
+void theaterChaseRainbow(byte wait) {
   for (int j = 0; j < 256; j++) {   // cycle all 256 colors in the wheel
     for (int q = 0; q < 3; q++) {
-      for (int i = 0; i < strip.numPixels(); i = i + 3) {
-        strip.setPixelColor(i + q, Wheel( (i + j) % 255)); //turn every third pixel on
+      for (int i = 0; i < frontPixels.numPixels(); i = i + 3) {
+        frontPixels.setPixelColor(i + q, Wheel( (i + j) % 255)); //turn every third pixel on
       }
-      strip.show();
+      frontPixels.show();
+
+      for (int i = 0; i < sidePixels.numPixels(); i = i + 3) {
+        sidePixels.setPixelColor(i + q, Wheel( (i + j) % 255)); //turn every third pixel on
+      }
+      sidePixels.show();
 
       delay(wait);
 
-      for (int i = 0; i < strip.numPixels(); i = i + 3) {
-        strip.setPixelColor(i + q, 0);      //turn every third pixel off
+      for (int i = 0; i < sidePixels.numPixels(); i = i + 3) {
+        sidePixels.setPixelColor(i + q, 0);      //turn every third pixel off
+      }
+      for (int i = 0; i < frontPixels.numPixels(); i = i + 3) {
+        frontPixels.setPixelColor(i + q, 0);      //turn every third pixel off
       }
     }
   }
