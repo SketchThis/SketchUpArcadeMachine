@@ -109,27 +109,14 @@ void setup() {
 
   setAllLEDs(colorVal(255, 0, 0));  //startup all LED strands to RED
   digitalWrite(volumeLEDPin, HIGH);
+  digitalWrite(fogMachineMain, HIGH);  //turn on fogMachine relay
+
 
   setAllLEDs(colorVal(255, 0, 0));
   
- // theaterChaseRainbow(50);
-// setAllLEDs(colorVal(255, 0, 0));
+ //theaterChaseRainbow(50);
+ setAllLEDs(colorVal(255, 0, 0));
 
-  
-  ///digitalWrite(fogMachineMain, HIGH);  //turn on fogMachine relay
-//  delay(90000);
- // digitalWrite(fogRelayPin, HIGH);
-  //delay(1500);
- // digitalWrite(fogRelayPin, LOW);
- // delay(1500);
- // digitalWrite(fogRelayPin, HIGH);
-//  delay(1500);
-//  digitalWrite(fogRelayPin, LOW);
-//  delay(1500);
- // digitalWrite(fogRelayPin, HIGH);
-//  delay(1500);
-//  digitalWrite(fogRelayPin, LOW);
- // delay(1500);
 }
 
 /********************************************************************************/
@@ -161,6 +148,8 @@ void loop() {
       {
         digitalWrite(fogMachineMain, HIGH);
         digitalWrite(fogRelayPin, HIGH);
+        //Erics addition for the bomb button
+        theaterChaseRainbow(4);
       }
       else
       {
@@ -232,8 +221,6 @@ void readComboButtons()
         digitalWrite(bombWAVPin, LOW);
         delay(10);
         digitalWrite(bombWAVPin, HIGH);
-        theaterChaseRainbow(2);
-        setAllLEDs(colorVal(255, 0, 0));
       }
       for (int key = 0; key < 3; key++) {
         Keyboard.press(comboKeypress[i][key]);
@@ -249,6 +236,7 @@ void readComboButtons()
     }
   }
 }
+
 
 /********************************************************************************/
 /* NeoPixel Routines                                                            */
