@@ -1,5 +1,3 @@
-#include <Keyboard.h>
-
 /********************************************************************************
   SketchUp & SparkFun Arcade Controls
   Line (L)
