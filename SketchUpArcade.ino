@@ -1,5 +1,3 @@
-#include <Keyboard.h>
-
 /********************************************************************************
   SketchUp & SparkFun Arcade Controls
   Line (L)
@@ -24,6 +22,7 @@
   /*******************************************************************************/
 #include <Keyboard.h>
 #include <Adafruit_NeoPixel.h>
+#define BRIGHT 200
 
 byte selectPins[] = {14, 16, 10};
 byte muxInputPin = 15;
@@ -42,9 +41,7 @@ byte bombWAVPin = 7;
 Adafruit_NeoPixel frontPixels =  Adafruit_NeoPixel(40, frontLEDPin, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel sidePixels =  Adafruit_NeoPixel(68, sideLEDPin, NEO_GRB + NEO_KHZ800);
 
-const byte brightnessLevel = 255;
-
-unsigned long defaultColor = 0x0000FF;
+unsigned long defaultColor;
 
 //standard keypress buttons
 char keypress[8] = {'l', 'r', 'c', 'p', 'm', 'b', 't', 'e'};
@@ -60,12 +57,15 @@ char comboKeypress[5][3] = {
 };
 
 boolean fogFlag = false;
-unsigned int fogTime = 1;  
+unsigned int fogTime = 1;
 unsigned long fogStartTime;
 unsigned long fogStopTime;
 
-unsigned long activityTimeOut;
-unsigned long timeOut = 2 * 3600 * 1000;  //activity timeout for fog machine
+unsigned long activityTimeOut = 60000;  //activity timeout before breathing pattern starts
+unsigned long activityTimer;
+
+unsigned long fogTimeOut = 7200000;  //activity timeout for fog machine
+unsigned long fogTimer;
 
 int previousButtonState = HIGH;   // for checking the state of a pushButton
 int counter = 0;                  // button push counter
@@ -99,8 +99,10 @@ void setup() {
   frontPixels.begin();
   sidePixels.begin();
 
-  frontPixels.setBrightness(brightnessLevel);
-  sidePixels.setBrightness(brightnessLevel);
+  frontPixels.setBrightness(BRIGHT);
+  sidePixels.setBrightness(BRIGHT);
+
+  defaultColor = colorVal(255, 0, 0);
 
   //trigger start-up sound.
   digitalWrite(startUpWAVPin, LOW);
@@ -113,21 +115,27 @@ void setup() {
 
 
   setAllLEDs(colorVal(255, 0, 0));
-  
- theaterChaseRainbow(100);
- setAllLEDs(colorVal(255, 0, 0));
 
+  theaterChaseRainbow(100); //starup light chase
+  digitalWrite(fogRelayPin, HIGH);  //turn on fogMachine relay
+  delay(500);
+  digitalWrite(fogRelayPin, LOW);  //turn OFF fogMachine relay
+  setAllLEDs(defaultColor);
+
+  //initialize the activity timers
+//  activityTimer = millis() + activityTimeOut;
+  fogTimer = millis() + fogTimeOut;
 }
 
 /********************************************************************************/
 void loop() {
   readStdButtons();
   readComboButtons();
-
+//digitalWrite(fogMachineMain, HIGH);  //turn on fogMachine relay
   if (Serial.available() > 0)
   {
     int inNum = Serial.parseInt();
-   
+
     if (inNum == 1)
     {
       digitalWrite(startUpWAVPin, LOW);
@@ -136,29 +144,49 @@ void loop() {
     }
     if (inNum == 2)
     {
-        digitalWrite(bombWAVPin, LOW);
-        delay(20);
-        digitalWrite(bombWAVPin, HIGH);
-    }    
+      digitalWrite(bombWAVPin, LOW);
+      delay(20);
+      digitalWrite(bombWAVPin, HIGH);
+    }
   }
 
-    if (fogFlag == true)
+  if (fogFlag == true)
+  {
+    if (millis() < fogStopTime)
     {
-      if (millis() < fogStopTime)
-      {
-        digitalWrite(fogMachineMain, HIGH);
-        digitalWrite(fogRelayPin, HIGH);
-        //Erics addition for the bomb button
-        theaterChaseRainbow(4);
-        setAllLEDs(colorVal(255, 0, 0));
-      }
-      else
-      {
-//        digitalWrite(fogMachineMain, LOW);
-        digitalWrite(fogRelayPin, LOW);
-        fogFlag = false;
-      }
+      digitalWrite(fogRelayPin, HIGH);
+      //Erics addition for the bomb button
+      theaterChaseRainbow(4);
+      setAllLEDs(colorVal(255, 0, 0));
     }
+    else
+    {
+      digitalWrite(fogRelayPin, LOW);
+      fogFlag = false;
+    }
+  }
+
+  if (millis() > activityTimer)
+  {
+    nonBlockingBreathe();  //cycle the LED strips through a breathing pattern
+  }
+  else
+  {
+    setAllLEDs(defaultColor);  //reset all LEDs to RED
+  }
+
+  if (millis() > fogTimer)
+  {
+    //Serial.println("Fog machine should be OFF due to sleep timer");
+    //turn off the fogMachineMain Relay
+    digitalWrite(fogMachineMain, LOW);
+  }
+  else
+  {
+    //Serial.println("Fog machine should be ON due to sleep timer");
+    //turn on the fogMachineMain Relay
+    digitalWrite(fogMachineMain, HIGH);
+  }
 }
 
 /********************************************************************************/
@@ -174,6 +202,14 @@ void readStdButtons() {
     //read the input
     if (digitalRead(muxInputPin) == LOW)
     {
+      //update the activityTimer and fogTimer
+      activityTimer = millis() + activityTimeOut;
+      fogTimer = millis() + fogTimeOut;
+
+      Serial.print(fogTimer);
+
+      Serial.print("\t");
+
       Serial.print(i);
       Serial.print(":\t");
       Serial.print((i & B100) >> 2 );
@@ -183,7 +219,6 @@ void readStdButtons() {
       Serial.print((i & B001) >> 0 );
       Serial.print(" --> ");
 
-      // activityTimeOut = millis() + timeOut;
       Keyboard.print(keypress[i]);
       Serial.println(keypress[i]);
 
@@ -209,6 +244,10 @@ void readComboButtons()
   {
     if (digitalRead(comboButtonPins[i]) == LOW)
     {
+      //update the activityTimer and fogTimer
+      activityTimer = millis() + activityTimeOut;
+      fogTimer = millis() + fogTimeOut;
+
       Serial.print("combo");
       Serial.println(i);
       digitalWrite(17, LOW);  //light up debug LED
@@ -368,4 +407,30 @@ unsigned long colorVal(byte r, byte g, byte b) {
   return ((unsigned long)r << 16) | ((unsigned long)g <<  8) | b;
 }
 
+/********************************************************************************/
+//cycles the LED strips through a breathing pattern using a sin() calc and
+//static variables
+void nonBlockingBreathe()
+{
+  static float angle = 0.0;
+  static float brightness;
 
+  static float highcolor = BRIGHT;
+  static float lowcolor = 16.0;
+
+  static float amplitude = (highcolor - lowcolor) / 2;
+  static float center = lowcolor + amplitude;
+
+  if ((millis() % 20) == 0)
+  {
+    amplitude = (highcolor - lowcolor) / 2;
+    center = lowcolor + amplitude;
+
+    brightness = sin(angle) * amplitude + center;
+
+    setAllLEDs(colorVal(brightness, brightness, brightness));
+
+    angle += 0.05;
+    if (angle > 6.283) angle = 0.0;
+  }
+}
